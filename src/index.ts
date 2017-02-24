@@ -33,7 +33,7 @@ class VernalApplication {
   }
 
   linkComponent(component: any) {
-    return (target: any, propertyKey: string) => {
+    return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
       let componentName: string;
       if (typeof component === 'string') {
         componentName = component;
@@ -48,6 +48,8 @@ class VernalApplication {
         propertyKey,
         componentName,
       });
+      descriptor = {...descriptor, configurable: true};
+      return descriptor;
     };
   }
 
@@ -67,6 +69,7 @@ class VernalApplication {
       Object.defineProperty(this.instances[targetName], propertyKey, {
         value: this.instances[componentName],
         writable: false,
+        configurable: false,
       });
     }
     // Run init (if defined)
