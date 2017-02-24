@@ -68,22 +68,19 @@ class VernalApplication {
         case ComponentType.SINGLETON:
           return component.data;
         case ComponentType.PROTOTYPE:
-          const newInstance = new component.data();
+          const componentClass = component.data;
+          const newInstance = new componentClass();
           // Inject dependencies
           for (const {
             targetName,
             propertyKey,
             componentName,
           } of this.autowires.filter(item => item.targetName === componentName)) {
-            if (!this.hasComponent(targetName)) {
-              throw new VernalInjectComponentError(`Could not find component '${targetName}' in context while trying to inject into it`);
-            }
             if (!this.hasComponent(componentName)) {
               throw new VernalInjectComponentError(`Could not find component '${componentName}' in context while trying to inject into '${targetName}.${propertyKey}'`);
             }
-            const target = await this.getComponent(targetName);
             const component = await this.getComponent(componentName);
-            Object.defineProperty(target, propertyKey, {
+            Object.defineProperty(newInstance, propertyKey, {
               value: component,
               writable: false,
               configurable: false,
