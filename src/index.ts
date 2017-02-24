@@ -54,14 +54,17 @@ class VernalApplication {
   async run() {
     // Inject dependencies
     for (const {
-      target,
+      targetName,
       propertyKey,
       componentName,
     } of this.autowires) {
-      if (!{}.hasOwnProperty.call(this.instances, componentName)) {
-        throw new Error(`Could not find component '${componentName}' in context while trying to inject into '${target.constructor.name}.${propertyKey}'`);
+      if (!{}.hasOwnProperty.call(this.instances, targetName)) {
+        throw new Error(`Could not find component '${targetName}' in context while trying to inject it`);
       }
-      Object.defineProperty(target, propertyKey, {
+      if (!{}.hasOwnProperty.call(this.instances, componentName)) {
+        throw new Error(`Could not find component '${componentName}' in context while trying to inject into '${targetName}.${propertyKey}'`);
+      }
+      Object.defineProperty(this.instances[targetName], propertyKey, {
         value: this.instances[componentName],
         writable: false,
       });
