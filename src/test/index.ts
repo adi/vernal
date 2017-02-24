@@ -1,23 +1,27 @@
-import { Component, Autowire, Vernal } from "../annotations/Component";
+import { Vernal, Component, Autowire } from "../annotations/Vernal";
+import { Expose } from "../annotations/Expose";
 
 @Component
 class A {
-  @Autowire(B)
-  private b: any;
-
-  init() {
-    console.log(this.b);
+  async init() {
+    console.log('A.init');
   }
 }
 
+@Expose
 @Component
 class B {
     @Autowire(A)
     private a: any;
 
-    init() {
-        console.log(this.a);
+    async init() {
+      console.log('B.init');
+      console.log(this.a);
     }
 }
 
-Vernal.run();
+(async () => {
+  console.log('App starting...');
+  await Vernal.run();
+  console.log('App started');
+})();

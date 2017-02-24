@@ -1,14 +1,30 @@
+export interface VernalPlugin {
+  run(): Promise<any>;
+}
+
 class VernalApplication {
 
-  instances = {};
-  autowires = [];
-  exposed = [];
+  private instances = {};
+  private autowires = [];
+  private plugins: VernalPlugin[] = [];
+
+  registerPlugin(plugin: VernalPlugin) {
+    this.plugins.push(plugin);
+  }
+
+  hasComponent(componentName: string) {
+    return {}.hasOwnProperty.call(this.instances, componentName);
+  }
+
+  getComponent(componentName: string) {
+    return this.instances[componentName];
+  }
 
   registerComponent(component: any) {
     this.instances[component.name] = new component();
   }
 
-  registerComponentInstance(instance: Object) {
+  registerComponentInstance(instance: any) {
     this.instances[instance.constructor.name] = instance;
   }
 
@@ -35,26 +51,7 @@ class VernalApplication {
     };
   }
 
-  exportedMethods = {};
-
-  getExportedMethods() {
-    return {...this.exportedMethods};
-  }
-
-  exportComponent(component: any) {
-    const props = Object.getOwnPropertyNames(component.prototype);
-    for(const prop of props) {
-      if(prop !== 'constructor' && typeof component.prototype[prop] === 'function') {
-        this.exposed.push({
-          name: `${component.name}.${prop}`,
-          func: component.prototype[prop],
-          componentName: component.name,
-        });
-      }
-    }
-  }
-
-  run() {
+  async run() {
     // Inject dependencies
     for (const {
       target,
@@ -75,16 +72,9 @@ class VernalApplication {
         this.instances[componentName].init();
       }
     }
-    // Extract exports
-    for (const {
-      name,
-      func,
-      componentName,
-    } of this.exposed) {
-      if (!{}.hasOwnProperty.call(this.instances, componentName)) {
-        throw new Error(`Could not find component '${componentName}' in context while trying to bind exported method '${name}'`);
-      }
-      this.exportedMethods[name] = func.bind(this.instances[componentName]);
+    // Run plugins
+    for (const plugin of this.plugins) {
+      await plugin.run();
     }
   }
 }
@@ -100,8 +90,4 @@ export function Autowire(component: any);
 
 export function Autowire(component: any) {
   return Vernal.linkComponent(component);
-}
-
-export function Export(component: any) {
-  return Vernal.exportComponent(component);
 }
