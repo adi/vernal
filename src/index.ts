@@ -50,8 +50,14 @@ class VernalApplication {
 
   async callInitIfAvailable(instance) {
     try {
-      if (typeof instance.prototype.init === 'function') {
-        return instance.prototype.init.bind(instance)();
+      if (instance.prototype !== undefined) {
+        if (typeof instance.prototype.init === 'function') {
+          return instance.prototype.init.bind(instance)();
+        }
+      } else {
+        if (typeof instance.init === 'function') {
+          return instance.init();
+        }
       }
     } catch (e) {
       throw new VernalInitError(`Error calling while calling ${instance.constructor.name}.init`, e);
