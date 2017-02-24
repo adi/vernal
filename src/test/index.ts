@@ -1,15 +1,15 @@
 import { Vernal, Component, Autowire } from "..";
 import { Expose } from "./Expose";
 
-@Component
+@Component()
 class A {
   async init() {
     console.log('A.init');
   }
 }
 
-@Expose
-@Component
+@Expose()
+@Component()
 class B {
     @Autowire(A)
     private a: any;

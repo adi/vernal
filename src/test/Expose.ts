@@ -23,16 +23,19 @@ class ExposedContext implements VernalPlugin {
   }
 
   async run() {
-    // Extract exports
-    for (const {
-      name,
-      func,
-      componentName,
-    } of this.exposed) {
-      if (!Vernal.hasComponent(componentName)) {
-        throw new Error(`Could not find component '${componentName}' in context while trying to bind exported method '${name}'`);
+    try {
+      for (const {
+        name,
+        func,
+        componentName,
+      } of this.exposed) {
+        if (!Vernal.hasComponent(componentName)) {
+          throw new Error(`Could not find component '${componentName}' in context while trying to bind exported method '${name}'`);
+        }
+        this.exposedMethods[name] = func.bind(await Vernal.getComponent(componentName));
       }
-      this.exposedMethods[name] = func.bind(Vernal.getComponent(componentName));
+    } catch (e) {
+      throw new Error('Expose error');
     }
   }
 
@@ -41,6 +44,8 @@ class ExposedContext implements VernalPlugin {
 export const Exposed = new ExposedContext();
 Vernal.registerPlugin(Exposed);
 
-export function Expose(component: any) {
-  return Exposed.exposeComponent(component);
+export function Expose() {
+  return (component: any) => {
+    return Exposed.exposeComponent(component);
+  }
 }

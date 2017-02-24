@@ -2,9 +2,41 @@ export interface VernalPlugin {
   run(): Promise<any>;
 }
 
+export enum ComponentType {
+  SINGLETON,
+  PROTOTYPE,
+}
+
+export class VernalError extends Error {
+  constructor(message, public cause?: Error) {
+    super(message);
+  }
+}
+
+export class VernalRunError extends VernalError {
+}
+
+export class VernalInitError extends VernalError {
+}
+
+export class VernalGetComponentError extends VernalError {
+}
+
+export class VernalInvalidComponentTypeError extends VernalError {
+}
+
+export class VernalInjectComponentError extends VernalError {
+}
+
+export class VernalPossibleDependencyCycleError extends VernalError {
+}
+
+export class VernalPluginError extends VernalError {
+}
+
 class VernalApplication {
 
-  private instances = {};
+  private components = {};
   private autowires = [];
   private plugins: VernalPlugin[] = [];
 
@@ -13,23 +45,71 @@ class VernalApplication {
   }
 
   hasComponent(componentName: string) {
-    return {}.hasOwnProperty.call(this.instances, componentName);
+    return {}.hasOwnProperty.call(this.components, componentName);
   }
 
-  getComponent(componentName: string) {
-    return this.instances[componentName];
+  async callInitIfAvailable(instance) {
+    try {
+      if (typeof instance.prototype.init === 'function') {
+        return instance.prototype.init.bind(instance)();
+      }
+    } catch (e) {
+      throw new VernalInitError(`Error calling while calling ${instance.constructor.name}.init`, e);
+    }
   }
 
-  registerComponent(component: any) {
-    this.instances[component.name] = new component();
+  async getComponent(componentName: string) {
+    try {
+      const component = this.components[componentName];
+      if (component === undefined) {
+        throw new VernalGetComponentError(`Component '${componentName}' not found`);
+      }
+      switch (component.type) {
+        case ComponentType.SINGLETON:
+          return component.data;
+        case ComponentType.PROTOTYPE:
+          const newInstance = new component.data();
+          // Inject dependencies
+          for (const {
+            targetName,
+            propertyKey,
+            componentName,
+          } of this.autowires.filter(item => item.targetName === componentName)) {
+            if (!this.hasComponent(targetName)) {
+              throw new VernalInjectComponentError(`Could not find component '${targetName}' in context while trying to inject into it`);
+            }
+            if (!this.hasComponent(componentName)) {
+              throw new VernalInjectComponentError(`Could not find component '${componentName}' in context while trying to inject into '${targetName}.${propertyKey}'`);
+            }
+            const target = await this.getComponent(targetName);
+            const component = await this.getComponent(componentName);
+            Object.defineProperty(target, propertyKey, {
+              value: component,
+              writable: false,
+              configurable: false,
+            });
+          }
+          // Run init (if defined)
+          await this.callInitIfAvailable(newInstance);
+          return newInstance;
+        default:
+          throw new VernalInvalidComponentTypeError(`Component '${componentName}' has invalid type '${component.type}'`);
+      }
+    } catch (e) {
+      throw new VernalGetComponentError(`Error getting component ${componentName}`, e);
+    }
+  }
+
+  registerComponent(component: any, type: ComponentType) {
+    this.components[component.name] = { type, data: component };
   }
 
   registerComponentInstance(instance: any) {
-    this.instances[instance.constructor.name] = instance;
+    this.components[instance.constructor.name] = { type: ComponentType.SINGLETON, data: instance };
   }
 
   registerValue(name: string, value: any) {
-    this.instances[name] = value;
+    this.components[name] = { type: ComponentType.SINGLETON, data: value };
   }
 
   linkComponent(component: any) {
@@ -39,7 +119,7 @@ class VernalApplication {
         componentName = component;
       } else {
         if (component === undefined) {
-          throw new Error(`Component class for component to be autowired in '${target.constructor.name}.${propertyKey}' not loaded yet (perhaps you have a cycle in your dependencies)`);
+          throw new VernalPossibleDependencyCycleError(`Component class for component to be autowired in '${target.constructor.name}.${propertyKey}' not loaded yet (perhaps you have a cycle in your dependencies)`);
         }
         componentName = component.name;
       }
@@ -48,47 +128,60 @@ class VernalApplication {
         propertyKey,
         componentName,
       });
-      descriptor = {...descriptor, configurable: true};
+      descriptor = { ...descriptor, configurable: true };
       return descriptor;
     };
   }
 
   async run() {
-    // Inject dependencies
-    for (const {
-      targetName,
-      propertyKey,
-      componentName,
-    } of this.autowires) {
-      if (!{}.hasOwnProperty.call(this.instances, targetName)) {
-        throw new Error(`Could not find component '${targetName}' in context while trying to inject it`);
+    try {
+      // Inject dependencies
+      for (const {
+        targetName,
+        propertyKey,
+        componentName,
+      } of this.autowires) {
+        if (!this.hasComponent(targetName)) {
+          throw new VernalInjectComponentError(`Could not find component '${targetName}' in context while trying to inject into it`);
+        }
+        if (!this.hasComponent(componentName)) {
+          throw new VernalInjectComponentError(`Could not find component '${componentName}' in context while trying to inject into '${targetName}.${propertyKey}'`);
+        }
+        const target = await this.getComponent(targetName);
+        const component = await this.getComponent(componentName);
+        Object.defineProperty(target, propertyKey, {
+          value: component,
+          writable: false,
+          configurable: false,
+        });
       }
-      if (!{}.hasOwnProperty.call(this.instances, componentName)) {
-        throw new Error(`Could not find component '${componentName}' in context while trying to inject into '${targetName}.${propertyKey}'`);
+      // Run init (if defined)
+      for (const componentName of Object.keys(this.components)) {
+        const component = this.components[componentName];
+        if (component.type === ComponentType.SINGLETON) {
+          await this.callInitIfAvailable(component.data);
+        }
       }
-      Object.defineProperty(this.instances[targetName], propertyKey, {
-        value: this.instances[componentName],
-        writable: false,
-        configurable: false,
-      });
-    }
-    // Run init (if defined)
-    for (const componentName of Object.keys(this.instances)) {
-      if (typeof this.instances[componentName].init === 'function') {
-        this.instances[componentName].init();
+      // Run plugins
+      for (const plugin of this.plugins) {
+        try {
+          await plugin.run();
+        } catch (e) {
+          throw new VernalPluginError(`Plugin error in '${plugin.constructor.name}'`, e);
+        }
       }
-    }
-    // Run plugins
-    for (const plugin of this.plugins) {
-      await plugin.run();
+    } catch (e) {
+      throw new VernalRunError('Boot error', e);
     }
   }
 }
 
 export const Vernal = new VernalApplication();
 
-export function Component(component: any) {
-  return Vernal.registerComponent(component);
+export function Component(type = ComponentType.SINGLETON) {
+  return (component: any) => {
+    return Vernal.registerComponent(component, type);
+  }
 }
 
 export function Autowire(component: string);
