@@ -1,8 +1,8 @@
 {
   "name": "vernal",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Vernal IoC container for TypeScript",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "compile": "tsc",
     "compile-watch": "tsc -w",
