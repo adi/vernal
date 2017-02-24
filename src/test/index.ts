@@ -1,5 +1,5 @@
-import { Vernal, Component, Autowire } from "../annotations/Vernal";
-import { Expose } from "../annotations/Expose";
+import { Vernal, Component, Autowire } from "..";
+import { Expose } from "./Expose";
 
 @Component
 class A {

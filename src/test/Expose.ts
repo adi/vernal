@@ -1,4 +1,4 @@
-import { Vernal, VernalPlugin } from "./Vernal";
+import { Vernal, VernalPlugin } from "..";
 
 class ExposedContext implements VernalPlugin {
 
