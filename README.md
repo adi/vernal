@@ -14,7 +14,7 @@ In special cases it is also possible to use `Vernal.registerValue` to register f
 # Usage example
 
 ```typescript
-import { Vernal, Component, Autowire } from "..";
+import { Vernal, Component, Autowire } from 'vernal';
 
 @Component
 class A {
