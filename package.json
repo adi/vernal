@@ -1,0 +1,35 @@
+{
+  "name": "vernal",
+  "version": "0.0.0",
+  "description": "Vernal IoC container for TypeScript",
+  "main": "index.js",
+  "scripts": {
+    "compile": "tsc",
+    "compile-watch": "tsc -w",
+    "test": "nodemon dist/test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adi/vernal.git"
+  },
+  "keywords": [
+    "vernal",
+    "spring",
+    "ioc",
+    "container",
+    "dependency",
+    "injection"
+  ],
+  "author": "Adrian Punga <adrian.punga@sqreept.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/adi/vernal/issues"
+  },
+  "homepage": "https://github.com/adi/vernal#readme",
+  "devDependencies": {
+    "@types/node": "^7.0.5",
+    "nodemon": "^1.11.0",
+    "tslint": "^4.4.2",
+    "typescript": "^2.2.1"
+  }
+}
