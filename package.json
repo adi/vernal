@@ -1,6 +1,6 @@
 {
   "name": "vernal",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Vernal IoC container for TypeScript & JavaScript (with Babel Legacy Decorators)",
   "main": "dist/index.js",
   "scripts": {
