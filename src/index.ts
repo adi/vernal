@@ -44,7 +44,7 @@ class VernalApplication {
         componentName = component.name;
       }
       this.autowires.push({
-        target: target.constructor.name,
+        targetName: target.constructor.name,
         propertyKey,
         componentName,
       });
