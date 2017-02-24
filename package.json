@@ -1,6 +1,6 @@
 {
   "name": "vernal",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Vernal IoC container for TypeScript",
   "main": "dist/index.js",
   "scripts": {
