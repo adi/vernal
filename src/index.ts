@@ -93,7 +93,7 @@ class VernalApplication {
     beanInstance[POST_CONSTRUCT_HOOKS_PROPERTY].push(hookName);
   }
 
-  async getBean(beanNameOrClass: string | { new (): any }) {
+  async getBeanInstance(beanNameOrClass: string | { new (): any }) {
     let beanName: string;
     if (typeof beanNameOrClass === 'string') {
       beanName = beanNameOrClass;
@@ -119,7 +119,7 @@ class VernalApplication {
     } else {
       throw new VernalError(`Unknown bean type '${beanDescriptor.beanType}'`);
     }
-    return bean;
+    return bean.instance;
   }
 
   private async injectDependencies(bean: Bean) {
@@ -127,11 +127,11 @@ class VernalApplication {
     const injections = beanInstance[INJECTIONS_PROPERTY];
     if (injections !== undefined) {
       for (const { propertyKey, propertyBeanName } of injections) {
-        const propertyBean = await this.getBean(propertyBeanName);
+        const propertyBeanInstance = await this.getBeanInstance(propertyBeanName);
         Object.defineProperty(beanInstance, propertyKey, {
           configurable: false,
           writable: false,
-          value: propertyBean,
+          value: propertyBeanInstance,
         });
       }
     }

@@ -13,9 +13,11 @@ The library provides `@Component(type)/@Singleton/@Prototype`, `@Autowire(class|
 
 - `@Autowire(class|name)/@Inject(class|name)` - initializes a class field to the registered bean value. Bean can be specified by class or by name
 
+- `@PostConstruct` - designates a sync or async method to run after the bean is completely initialized
+
 In special cases it is also possible to use `Vernal.registerValue` to register free-form values or `Vernal.registerInstance` to register existing object instances.
 
-- `@PostConstruct` - designates a sync or async method to run after the bean is completely initialized
+To retrieve a bean instance outside of injection context use `Vernal.getBeanInstance(class|name)`.
 
 # Usage example
 
