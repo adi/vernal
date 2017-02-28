@@ -3,35 +3,93 @@
 
 Spring Boot inspired IoC container for TypeScript originally created for Node.js applications.
 
-The library provides `@Component(type)` and `@Autowire(class|name)` decorators.
+The library provides `@Component(type)/@Singleton/@Prototype`, `@Autowire(class|name)/@Inject(class|name)` and `@PostConstruct` decorators.
 
-- `@Component(type)` - registers a singleton instance of the annotated class. Note that it is also possible to use `Vernal.registerComponent` instead of the @Component decorator
+- `@Component(type)` - registers the annotated class as a bean using type `type`. Note that it is also possible to use `Vernal.registerBean` instead of the @Component decorator.
 
-- `@Autowire(class|name)` - initializes a class field to the registered component value. Component can be specified by class or by name
+- `@Singleton` - shorthand for @Component(BeanType.SINGLETON).
 
-In special cases it is also possible to use `Vernal.registerValue` to register free-form values or `Vernal.registerComponentInstance` to register existing object instances.
+- `@Prototype` - shorthand for @Component(BeanType.PROTOTYPE).
+
+- `@Autowire(class|name)/@Inject(class|name)` - initializes a class field to the registered bean value. Bean can be specified by class or by name
+
+In special cases it is also possible to use `Vernal.registerValue` to register free-form values or `Vernal.registerInstance` to register existing object instances.
+
+- `@PostConstruct` - designates a sync or async method to run after the bean is completely initialized
 
 # Usage example
 
 ```typescript
-import { Vernal, Component, Autowire } from 'vernal';
+import { Vernal, Singleton, Prototype, Inject, PostConstruct } from 'vernal';
 
-@Component()
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:');
+  console.error(err);
+});
+
+class X {
+}
+
+Vernal.registerInstance(new X());
+
+Vernal.registerValue('V', { text: 'abc' });
+
+@Prototype
 class A {
+  public n = Math.random();
+  @Inject('D')
+  private d: any;
+  @Inject(X)
+  private x: any;
+  @Inject('V')
+  private v: any;
+
+  @PostConstruct
   async init() {
     console.log('A.init');
+    console.log(this.d);
+    console.log(this.x);
+    console.log(this.v);
   }
 }
 
-@Component()
+@Singleton
 class B {
-    @Autowire(A)
-    private a: any;
+  @Inject(A)
+  private a: any;
 
-    async init() {
-      console.log('B.init');
-      console.log(this.a);
-    }
+  @PostConstruct
+  async init() {
+    console.log('B.init');
+    console.log(this.a);
+  }
+}
+
+@Singleton
+class C {
+  @Inject(A)
+  private a: any;
+
+  @PostConstruct
+  async init() {
+    console.log('C.init');
+    console.log(this.a);
+  }
+}
+
+@Singleton
+class D {
+  @Inject(B)
+  private b: any;
+  @Inject(C)
+  private c: any;
+
+  @PostConstruct
+  async init() {
+    console.log('D.init');
+    console.log(this.b);
+    console.log(this.c);
+  }
 }
 
 (async () => {

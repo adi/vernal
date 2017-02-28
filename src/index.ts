@@ -93,30 +93,41 @@ class VernalApplication {
     beanInstance[POST_CONSTRUCT_HOOKS_PROPERTY].push(hookName);
   }
 
+  async getBean(beanNameOrClass: string | { new (): any }) {
+    let beanName: string;
+    if (typeof beanNameOrClass === 'string') {
+      beanName = beanNameOrClass;
+    } else {
+      beanName = beanNameOrClass.name;
+    }
+    const beanDescriptor = this.beanDescriptors[beanName];
+    if (beanDescriptor === undefined) {
+      throw new VernalError(`Bean descriptor of class '${beanName}' could not be found`);
+    }
+    let bean;
+    if (beanDescriptor.beanType === BeanType.SINGLETON || beanDescriptor.beanType === BeanType.VALUE) {
+      bean = this.beans[beanName];
+      if (bean === undefined) {
+        throw new VernalError(`Bean of class '${beanName}' could not be found`);
+      }
+    } else if (beanDescriptor.beanType === BeanType.PROTOTYPE) {
+      // Construct bean from prototype
+      bean = <Bean>{ instance: new beanDescriptor.beanClass() };
+      // Inject dependencies & run post construct hooks
+      await this.injectDependencies(bean);
+      await this.runPostConstructHooks(bean);
+    } else {
+      throw new VernalError(`Unknown bean type '${beanDescriptor.beanType}'`);
+    }
+    return bean;
+  }
+
   private async injectDependencies(bean: Bean) {
     const beanInstance = bean.instance;
     const injections = beanInstance[INJECTIONS_PROPERTY];
     if (injections !== undefined) {
       for (const { propertyKey, propertyBeanName } of injections) {
-        const propertyBeanDescriptor = this.beanDescriptors[propertyBeanName];
-        if (propertyBeanDescriptor === undefined) {
-          throw new VernalError(`Bean descriptor of class '${propertyBeanName}' could not be found`);
-        }
-        let propertyBean;
-        if (propertyBeanDescriptor.beanType === BeanType.SINGLETON || propertyBeanDescriptor.beanType === BeanType.VALUE) {
-          propertyBean = this.beans[propertyBeanName];
-          if (propertyBean === undefined) {
-            throw new VernalError(`Bean of class '${propertyBeanName}' could not be found`);
-          }
-        } else if (propertyBeanDescriptor.beanType === BeanType.PROTOTYPE) {
-          // Construct bean from prototype
-          propertyBean = <Bean>{ instance: new propertyBeanDescriptor.beanClass() };
-          // Inject dependencies & run post construct hooks
-          await this.injectDependencies(propertyBean);
-          await this.runPostConstructHooks(propertyBean);
-        } else {
-          throw new VernalError(`Unknown bean type '${propertyBeanDescriptor.beanType}'`);
-        }
+        const propertyBean = await this.getBean(propertyBeanName);
         Object.defineProperty(beanInstance, propertyKey, {
           configurable: false,
           writable: false,
@@ -184,7 +195,13 @@ export function Inject(propertyBeanNameOrClass: string | { new (): any }) {
   }
 }
 
-export const Autowire = Inject;
+export function Autowire(beanName: string);
+export function Autowire(beanClass: { new (): any });
+export function Autowire(propertyBeanNameOrClass: string | { new (): any }) {
+  return (beanInstance: Object, propertyKey: String, descriptor: PropertyDescriptor) => {
+    return Vernal.registerInjection(propertyBeanNameOrClass, beanInstance, propertyKey, descriptor);
+  }
+}
 
 export function PostConstruct(beanInstance: Object, hookName: String) {
   return Vernal.registerPostConstructHook(beanInstance, hookName);
