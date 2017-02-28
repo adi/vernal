@@ -1,2 +1,8 @@
 node_modules
 npm-debug.log
+.idea
+.editorconfig
+.gitignore
+src
+tsconfig.json
+tslint.json
