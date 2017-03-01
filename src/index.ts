@@ -103,31 +103,6 @@ class VernalApplication {
     return {}.hasOwnProperty.call(this.beanDescriptors, beanName);
   }
 
-  getBeanInstanceSync(beanNameOrClass: string | { new (): any }) {
-    let beanName: string;
-    if (typeof beanNameOrClass === 'string') {
-      beanName = beanNameOrClass;
-    } else {
-      beanName = beanNameOrClass.name;
-    }
-    const beanDescriptor = this.beanDescriptors[beanName];
-    if (beanDescriptor === undefined) {
-      throw new VernalError(`Bean descriptor of class '${beanName}' could not be found`);
-    }
-    let bean;
-    if (beanDescriptor.beanType === BeanType.SINGLETON || beanDescriptor.beanType === BeanType.VALUE) {
-      bean = this.beans[beanName];
-      if (bean === undefined) {
-        throw new VernalError(`Bean of class '${beanName}' could not be found`);
-      }
-    } else if (beanDescriptor.beanType === BeanType.PROTOTYPE) {
-      throw new VernalError(`Cannot retrieve a bean of type '${beanDescriptor.beanType}' synchronously`);
-    } else {
-      throw new VernalError(`Unknown bean type '${beanDescriptor.beanType}'`);
-    }
-    return bean.instance;
-  }
-
   async getBeanInstance(beanNameOrClass: string | { new (): any }) {
     let beanName: string;
     if (typeof beanNameOrClass === 'string') {
